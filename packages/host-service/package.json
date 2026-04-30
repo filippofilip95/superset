@@ -28,6 +28,10 @@
 			"types": "./src/trpc/index.ts",
 			"default": "./src/trpc/index.ts"
 		},
+		"./settings": {
+			"types": "./src/trpc/router/settings/index.ts",
+			"default": "./src/trpc/router/settings/index.ts"
+		},
 		"./terminal-env": {
 			"types": "./src/terminal/env.ts",
 			"default": "./src/terminal/env.ts"

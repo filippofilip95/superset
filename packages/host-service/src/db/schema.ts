@@ -92,6 +92,27 @@ export const pullRequests = sqliteTable(
 	],
 );
 
+export const hostAgentConfigs = sqliteTable(
+	"host_agent_configs",
+	{
+		id: text().primaryKey(),
+		presetId: text("preset_id").notNull(),
+		label: text().notNull(),
+		launchCommand: text("launch_command").notNull(),
+		promptInput: text("prompt_input").notNull(),
+		displayOrder: integer("display_order").notNull(),
+		createdAt: integer("created_at")
+			.notNull()
+			.$defaultFn(() => Date.now()),
+		updatedAt: integer("updated_at")
+			.notNull()
+			.$defaultFn(() => Date.now()),
+	},
+	(table) => [
+		index("host_agent_configs_display_order_idx").on(table.displayOrder),
+	],
+);
+
 export const workspaces = sqliteTable(
 	"workspaces",
 	{
