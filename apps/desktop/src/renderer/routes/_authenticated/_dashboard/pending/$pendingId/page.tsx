@@ -7,6 +7,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { GoGitBranch } from "react-icons/go";
 import { HiCheck, HiExclamationTriangle } from "react-icons/hi2";
 import { useHostTargetUrl } from "renderer/hooks/host-service/useHostTargetUrl";
+import { hostAgentConfigToResolvedConfig } from "renderer/hooks/useEnabledAgents/hostConfigShim";
+import { useIsV2CloudEnabled } from "renderer/hooks/useIsV2CloudEnabled";
 import { authClient } from "renderer/lib/auth-client";
 import { electronTrpc } from "renderer/lib/electron-trpc";
 import { formatRelativeTime } from "renderer/lib/formatRelativeTime";
@@ -52,6 +54,17 @@ export const Route = createFileRoute(
 	component: PendingWorkspacePage,
 });
 
+async function fetchV2HostAgentConfigs(activeHostUrl: string | null) {
+	if (!activeHostUrl) {
+		throw new Error(
+			"Host service is not available. Cannot resolve V2 agent configs.",
+		);
+	}
+	const client = getHostServiceClientByUrl(activeHostUrl);
+	const configs = await client.settings.agentConfigs.list.query();
+	return configs.map(hostAgentConfigToResolvedConfig);
+}
+
 function useFireIntent(pendingId: string, pending: PendingWorkspaceRow | null) {
 	const collections = useCollections();
 	const createWorkspace = useCreateDashboardWorkspace();
@@ -63,6 +76,7 @@ function useFireIntent(pendingId: string, pending: PendingWorkspaceRow | null) {
 	const { data: session } = authClient.useSession();
 	const activeOrganizationId = session?.session?.activeOrganizationId ?? null;
 	const { ensureWorkspaceInSidebar } = useDashboardSidebarState();
+	const { isV2CloudEnabled } = useIsV2CloudEnabled();
 
 	const fire = useCallback(async () => {
 		if (!pending) return;
@@ -167,7 +181,9 @@ function useFireIntent(pendingId: string, pending: PendingWorkspaceRow | null) {
 				(pending.intent === "fork" || pending.intent === "pr-checkout") &&
 				!!result.workspace?.id;
 			if (needsLaunchDispatch && result.workspace?.id) {
-				const agentConfigs = await trpcUtils.settings.getAgentPresets.fetch();
+				const agentConfigs = isV2CloudEnabled
+					? await fetchV2HostAgentConfigs(activeHostUrl)
+					: await trpcUtils.settings.getAgentPresets.fetch();
 				await dispatchForkLaunch({
 					workspaceId: result.workspace.id,
 					pending,
@@ -215,6 +231,7 @@ function useFireIntent(pendingId: string, pending: PendingWorkspaceRow | null) {
 		activeHostUrl,
 		activeOrganizationId,
 		hostUrl,
+		isV2CloudEnabled,
 	]);
 
 	return fire;
